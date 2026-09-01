@@ -1,8 +1,9 @@
 using System.Text.Json;
-using Drakoda.Api.Domain.AI;
+using Drakoda.AI;
 using Drakoda.Api.Domain.Generations;
 using Drakoda.Api.Infrastructure.Queue;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Drakoda.Api.Controllers;
 
@@ -20,25 +21,28 @@ public sealed class GenerationsController(DrakodaDbContext db, IGenerationQueue 
         if (!string.IsNullOrWhiteSpace(idempotencyKey))
         {
             var existing = await db.Generations.FirstOrDefaultAsync(x => x.IdempotencyKey == idempotencyKey, cancellationToken);
-            if (existing is not null) return Ok(new { id = existing.Id, status = existing.Status.ToString(), idempotent = true });
+            if (existing is not null)
+                return Ok(new { id = existing.Id, status = existing.Status.ToString(), idempotent = true });
         }
+
+        var model = await db.AIModels.FirstOrDefaultAsync(x => x.Id == request.ModelId && x.Enabled && x.Provider != null && x.Provider.Enabled, cancellationToken);
+        if (model is null) return NotFound(new { error = "MODEL_NOT_FOUND" });
 
         var now = DateTimeOffset.UtcNow;
         var generation = new Generation
         {
-            Id = Guid.NewGuid(), ModelId = request.ModelId, MediaType = request.MediaType,
+            Id = Guid.NewGuid(), ModelId = request.ModelId, Mode = request.Mode,
             Status = GenerationStatus.Requested, Prompt = request.Prompt,
-            SettingsJson = JsonSerializer.Serialize(request.Settings ?? new()),
-            SourceAssetIdsJson = JsonSerializer.Serialize(request.SourceAssetIds ?? []),
+            Settings = JsonSerializer.Serialize(request.Settings ?? new()),
+            SourceAssetIds = JsonSerializer.Serialize(request.SourceAssetIds ?? []),
             IdempotencyKey = string.IsNullOrWhiteSpace(idempotencyKey) ? null : idempotencyKey,
             CreatedAt = now, UpdatedAt = now
         };
 
         db.Generations.Add(generation);
-        await db.SaveChangesAsync(cancellationToken);
-        await queue.EnqueueAsync(generation.Id, cancellationToken);
         GenerationStateMachine.Transition(generation, GenerationStatus.Validating);
         await db.SaveChangesAsync(cancellationToken);
+        await queue.EnqueueAsync(generation.Id, cancellationToken);
 
         return Accepted($"/v1/generations/{generation.Id}", new { id = generation.Id, status = generation.Status.ToString() });
     }
@@ -51,4 +55,4 @@ public sealed class GenerationsController(DrakodaDbContext db, IGenerationQueue 
     }
 }
 
-public sealed record CreateGenerationDto(Guid ModelId, MediaType MediaType, string Prompt, Dictionary<string, object?>? Settings, List<Guid>? SourceAssetIds);
+public sealed record CreateGenerationDto(Guid ModelId, GenerationMode Mode, string Prompt, Dictionary<string, object?>? Settings, List<Guid>? SourceAssetIds);
