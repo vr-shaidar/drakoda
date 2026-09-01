@@ -9,13 +9,7 @@ public interface IAIProviderAdapter
     Task CancelAsync(ProviderContext context, CancellationToken cancellationToken);
 }
 
-public sealed record ProviderContext(
-    Guid GenerationId,
-    string ExternalModelId,
-    GenerationMode Mode,
-    string Prompt,
-    IReadOnlyDictionary<string, object?> Settings,
-    IReadOnlyList<string> SourceUris);
+public sealed record ProviderContext(Guid GenerationId, string ExternalModelId, GenerationMode Mode, string Prompt, IReadOnlyDictionary<string, object?> Settings, IReadOnlyList<string> SourceUris, string? ExternalJobId = null);
 
 public interface IProviderRouter
 {
@@ -26,16 +20,11 @@ public interface IProviderRouter
 public sealed class ProviderRouter(IEnumerable<IAIProviderAdapter> adapters) : IProviderRouter
 {
     private readonly IReadOnlyList<IAIProviderAdapter> _adapters = adapters.ToArray();
-
-    public IAIProviderAdapter Resolve(string providerId) =>
-        _adapters.FirstOrDefault(x => string.Equals(x.ProviderId, providerId, StringComparison.OrdinalIgnoreCase))
-        ?? throw new InvalidOperationException($"Provider '{providerId}' is not configured.");
-
+    public IAIProviderAdapter Resolve(string providerId) => _adapters.FirstOrDefault(x => string.Equals(x.ProviderId, providerId, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"Provider '{providerId}' is not configured.");
     public IAIProviderAdapter ResolveFor(string providerId, string externalModelId, GenerationMode mode)
     {
         var adapter = Resolve(providerId);
-        if (!adapter.Supports(mode, externalModelId))
-            throw new InvalidOperationException($"Provider '{providerId}' does not support {mode} for model '{externalModelId}'.");
+        if (!adapter.Supports(mode, externalModelId)) throw new InvalidOperationException($"Provider '{providerId}' does not support {mode} for model '{externalModelId}'.");
         return adapter;
     }
 }
