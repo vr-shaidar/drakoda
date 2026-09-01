@@ -6,6 +6,7 @@ public sealed class DrakodaDbContext(DbContextOptions<DrakodaDbContext> options)
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
     public DbSet<AIProvider> AIProviders => Set<AIProvider>();
     public DbSet<AIModel> AIModels => Set<AIModel>();
+    public DbSet<Generation> Generations => Set<Generation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -21,6 +22,19 @@ public sealed class DrakodaDbContext(DbContextOptions<DrakodaDbContext> options)
         {
             entity.ToTable("ai_models"); entity.HasKey(x => x.Id); entity.HasIndex(x => new { x.ProviderId, x.ExternalModelId }).IsUnique(); entity.Property(x => x.ExternalModelId).HasMaxLength(256); entity.Property(x => x.DisplayName).HasMaxLength(128); entity.Property(x => x.Capabilities).HasColumnType("jsonb"); entity.Property(x => x.Metadata).HasColumnType("jsonb");
             entity.HasOne(x => x.Provider).WithMany().HasForeignKey(x => x.ProviderId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<Generation>(entity =>
+        {
+            entity.ToTable("generations");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.IdempotencyKey).IsUnique().HasFilter("\"idempotency_key\" IS NOT NULL");
+            entity.HasIndex(x => new { x.Status, x.CreatedAt });
+            entity.Property(x => x.Prompt).HasMaxLength(10000);
+            entity.Property(x => x.Settings).HasColumnType("jsonb");
+            entity.Property(x => x.SourceAssetIds).HasColumnType("jsonb");
+            entity.Property(x => x.IdempotencyKey).HasMaxLength(255);
+            entity.Property(x => x.ErrorCode).HasMaxLength(128);
+            entity.Property(x => x.ErrorMessage).HasMaxLength(4000);
         });
     }
 }
