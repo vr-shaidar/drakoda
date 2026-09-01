@@ -1,3 +1,4 @@
+using Drakoda.AI;
 using Microsoft.EntityFrameworkCore;
 
 namespace Drakoda.Api.Domain.Generations;
