@@ -1,13 +1,13 @@
 # Project Progress
 
 ## Current phase
-Phase 1 — Foundation
+Phase 2 — AI Core (in progress)
 
 ## Phases
-- [x] Foundation — initial web/API/Docker/PostgreSQL/Redis/storage development foundation
+- [x] Foundation — initial web/API/Docker/PostgreSQL/Redis/MinIO development foundation
 - [ ] Identity/accounts
-- [ ] AI Gateway
-- [ ] Model registry
+- [ ] AI Gateway — contracts/router foundation added; execution workflow still in progress
+- [ ] Model registry — database entities and read API added; migration/seeding still in progress
 - [ ] Google integration
 - [ ] OpenAI integration
 - [ ] Image generation
@@ -24,24 +24,25 @@ Phase 1 — Foundation
 - [ ] Production deployment
 
 ## Current task
-Complete foundation verification and then implement Phase 2 AI core.
+Build durable generation entities, queue/worker orchestration, idempotency and normalized AI Gateway execution.
 
 ## Completed
-- Created isolated `phase-1-foundation` branch.
-- Added Docker Compose services for PostgreSQL, Redis, MinIO, .NET API and Next.js web.
-- Added `.env.example` and server-side configuration boundaries.
-- Added .NET 8 API with EF Core/Npgsql, Redis connection, CORS, ProblemDetails, health checks and Swagger/OpenAPI.
-- Added initial PostgreSQL EF migration and model snapshot.
-- Added Next.js TypeScript application and responsive commercial landing page.
+- Phase 1 web/API/container foundation committed on `phase-1-foundation`.
+- PostgreSQL, Redis and MinIO development services defined.
+- .NET 8 API configured with EF Core/Npgsql, Redis, ProblemDetails, CORS, health checks and Swagger/OpenAPI.
+- Next.js TypeScript landing application added.
+- Initial EF migration and model snapshot added.
+- Provider-neutral AI contracts and router added; no provider API is faked.
+- Database-driven provider/model registry entities and `GET /v1/models` added.
 
 ## Verification
-- GitHub write access verified by successful branch creation and file commits.
-- Local Docker/build execution is not available in this environment because outbound GitHub/Docker registry DNS is unavailable. REQUIRES EXTERNAL VERIFICATION.
-- Real provider integrations remain intentionally unimplemented until official current APIs are verified.
+- GitHub write access is working and implementation commits are being created on `phase-1-foundation`.
+- This execution environment does not contain the Docker or .NET CLIs and cannot resolve external GitHub/Docker registry hosts, so builds, migrations and Compose startup cannot be executed here. REQUIRES EXTERNAL VERIFICATION.
+- Real provider integrations remain intentionally pending official current API verification.
 
 ## Known issues
-- CI/local environment must run `docker compose build` and `docker compose up` to verify image builds and service startup.
-- EF migration should be executed against PostgreSQL in CI/development before Phase 2 integration testing.
+- The model registry schema needs its follow-up EF migration before `AIModelRegistry` can be used against a fresh database.
+- Authentication is not yet implemented; the public model endpoint is currently an architectural foundation and must be protected according to the API/security specification as authenticated APIs are added.
 
 ## Notes
-The repository specification remains the architectural source of truth. Continue updating this file after meaningful milestones.
+Do not mark a phase complete until implementation and runtime verification have both been performed.
