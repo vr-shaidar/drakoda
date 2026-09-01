@@ -6,29 +6,33 @@ namespace Drakoda.AI;
 
 public sealed class OpenAIProviderAdapter(IHttpClientFactory clients, IConfiguration configuration) : IAIProviderAdapter
 {
-    public string ProviderKey => "openai";
+    public string ProviderId => "openai";
 
-    public async Task<ProviderGenerationResult> GenerateAsync(ProviderGenerationRequest request, CancellationToken cancellationToken)
+    public bool Supports(GenerationMode mode, string externalModelId) =>
+        mode == GenerationMode.TextToImage && string.Equals(externalModelId, "gpt-image-2", StringComparison.OrdinalIgnoreCase);
+
+    public async Task<ProviderSubmission> SubmitAsync(ProviderContext context, CancellationToken cancellationToken)
     {
-        if (!request.Capability.Equals("text-to-image", StringComparison.OrdinalIgnoreCase))
-            throw new NotSupportedException("The OpenAI adapter currently implements text-to-image only.");
-
-        var key = configuration["AI:OpenAI:ApiKey"] ?? throw new InvalidOperationException("OpenAI API key is not configured.");
+        var key = configuration["AI:OpenAI:ApiKey"] ?? throw new InvalidOperationException("OPENAI_API_KEY_NOT_CONFIGURED");
         using var http = clients.CreateClient("openai");
-        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", key);
-
-        var payload = new Dictionary<string, object?> { ["model"] = request.ExternalModelId, ["prompt"] = request.Prompt };
-        foreach (var pair in request.Settings) payload[pair.Key] = pair.Value;
-        using var response = await http.PostAsync("/v1/images/generations", new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"), cancellationToken);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/images/generations");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", key);
+        var payload = new Dictionary<string, object?> { ["model"] = context.ExternalModelId, ["prompt"] = context.Prompt };
+        foreach (var pair in context.Settings) payload[pair.Key] = pair.Value;
+        request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+        using var response = await http.SendAsync(request, cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode) throw new ProviderException("OPENAI_REQUEST_FAILED", body);
         using var json = JsonDocument.Parse(body);
         var data = json.RootElement.GetProperty("data");
-        var first = data[0];
-        var url = first.TryGetProperty("url", out var u) ? u.GetString() : null;
-        var b64 = first.TryGetProperty("b64_json", out var b) ? b.GetString() : null;
-        return new ProviderGenerationResult(url, b64, null, null, null);
+        if (data.GetArrayLength() == 0) throw new ProviderException("OPENAI_EMPTY_RESPONSE", "No image output returned.");
+        return new ProviderSubmission(context.GenerationId.ToString("N"), "completed", new Dictionary<string, string> { ["response"] = body });
     }
+
+    public Task<ProviderResult> GetResultAsync(ProviderContext context, CancellationToken cancellationToken) =>
+        throw new InvalidOperationException("OPENAI_IMAGE_OPERATION_IS_SYNCHRONOUS");
+
+    public Task CancelAsync(ProviderContext context, CancellationToken cancellationToken) => Task.CompletedTask;
 }
 
 public sealed class ProviderException(string code, string message) : Exception(message)
