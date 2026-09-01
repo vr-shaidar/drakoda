@@ -13,7 +13,7 @@ Phase 4 — Pricing and Credits (in progress)
 - [ ] OpenAI integration
 - [ ] Image generation
 - [ ] Video generation
-- [ ] Storage/assets — object-storage abstraction, project/asset persistence and asset service contract added
+- [ ] Storage/assets — upload, list, project ownership and authenticated download endpoints added
 - [ ] Credits — immutable ledger domain and transactional service contract added
 - [ ] Pricing engine — versioned pricing/rules domain and pricing service contract added
 - [ ] Stripe billing
@@ -25,7 +25,7 @@ Phase 4 — Pricing and Credits (in progress)
 - [ ] Production deployment
 
 ## Current task
-Implement concrete storage/assets and pricing/credit services, then integrate them into generation execution.
+Complete transactional credits/pricing integration and database migrations, then implement authentication and real provider adapters after official API verification.
 
 ## Completed
 - Phase 1 web/API/container foundation committed on `phase-1-foundation`.
@@ -39,8 +39,10 @@ Implement concrete storage/assets and pricing/credit services, then integrate th
 - Generation state machine prevents invalid lifecycle transitions.
 - AI Gateway abstraction added for submit/poll/cancel operations.
 - Durable generation jobs/outputs, projects and assets persistence models added.
-- Object storage abstraction added.
+- Object storage abstraction and local development implementation added.
+- Asset upload/list/read/download API added with ownership checks and MIME/size validation.
 - Versioned pricing and immutable credit-ledger domain models added.
+- Generation validation/moderation-stage job service added.
 
 ## Verification
 - GitHub write access is working and implementation commits are being created on `phase-1-foundation`.
@@ -49,7 +51,8 @@ Implement concrete storage/assets and pricing/credit services, then integrate th
 
 ## Known issues
 - EF migrations need to be regenerated/validated with `dotnet ef` after the latest persistence-model changes.
-- Concrete credit transaction implementation is not yet wired into generation execution.
+- Credit transaction implementation is not yet wired into generation execution.
+- Authentication middleware is not yet enabled; user-scoped endpoints intentionally reject requests without a valid user claim.
 - Queue delivery and dead-letter/retry behavior still require production hardening.
 
 ## Notes
