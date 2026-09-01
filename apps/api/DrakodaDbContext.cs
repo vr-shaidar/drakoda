@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Drakoda.AI;
+using Drakoda.Api.Domain.Generations;
 
 public sealed class DrakodaDbContext(DbContextOptions<DrakodaDbContext> options) : DbContext(options)
 {
@@ -7,6 +8,8 @@ public sealed class DrakodaDbContext(DbContextOptions<DrakodaDbContext> options)
     public DbSet<AIProvider> AIProviders => Set<AIProvider>();
     public DbSet<AIModel> AIModels => Set<AIModel>();
     public DbSet<Generation> Generations => Set<Generation>();
+    public DbSet<GenerationJob> GenerationJobs => Set<GenerationJob>();
+    public DbSet<GenerationOutput> GenerationOutputs => Set<GenerationOutput>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,17 +28,10 @@ public sealed class DrakodaDbContext(DbContextOptions<DrakodaDbContext> options)
         });
         modelBuilder.Entity<Generation>(entity =>
         {
-            entity.ToTable("generations");
-            entity.HasKey(x => x.Id);
-            entity.HasIndex(x => x.IdempotencyKey).IsUnique().HasFilter("\"idempotency_key\" IS NOT NULL");
-            entity.HasIndex(x => new { x.Status, x.CreatedAt });
-            entity.Property(x => x.Prompt).HasMaxLength(10000);
-            entity.Property(x => x.Settings).HasColumnType("jsonb");
-            entity.Property(x => x.SourceAssetIds).HasColumnType("jsonb");
-            entity.Property(x => x.IdempotencyKey).HasMaxLength(255);
-            entity.Property(x => x.ErrorCode).HasMaxLength(128);
-            entity.Property(x => x.ErrorMessage).HasMaxLength(4000);
+            entity.ToTable("generations"); entity.HasKey(x => x.Id); entity.HasIndex(x => x.IdempotencyKey).IsUnique().HasFilter("\"idempotency_key\" IS NOT NULL"); entity.HasIndex(x => new { x.Status, x.CreatedAt });
+            entity.Property(x => x.Prompt).HasMaxLength(10000); entity.Property(x => x.Settings).HasColumnType("jsonb"); entity.Property(x => x.SourceAssetIds).HasColumnType("jsonb"); entity.Property(x => x.IdempotencyKey).HasMaxLength(255); entity.Property(x => x.ErrorCode).HasMaxLength(128); entity.Property(x => x.ErrorMessage).HasMaxLength(4000);
         });
+        GenerationPersistence.Configure(modelBuilder);
     }
 }
 
