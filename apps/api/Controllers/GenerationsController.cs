@@ -9,7 +9,7 @@ namespace Drakoda.Api.Controllers;
 
 [ApiController]
 [Route("v1/generations")]
-public sealed class GenerationsController(DrakodaDbContext db, IGenerationQueue queue) : ControllerBase
+public sealed class GenerationsController(DrakodaDbContext db, IGenerationQueue queue, IAIGateway gateway) : ControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> Create(CreateGenerationDto request, CancellationToken cancellationToken)
@@ -21,8 +21,7 @@ public sealed class GenerationsController(DrakodaDbContext db, IGenerationQueue 
         if (!string.IsNullOrWhiteSpace(idempotencyKey))
         {
             var existing = await db.Generations.FirstOrDefaultAsync(x => x.IdempotencyKey == idempotencyKey, cancellationToken);
-            if (existing is not null)
-                return Ok(new { id = existing.Id, status = existing.Status.ToString(), idempotent = true });
+            if (existing is not null) return Ok(new { id = existing.Id, status = existing.Status.ToString(), idempotent = true });
         }
 
         var model = await db.AIModels.FirstOrDefaultAsync(x => x.Id == request.ModelId && x.Enabled && x.Provider != null && x.Provider.Enabled, cancellationToken);
@@ -52,6 +51,22 @@ public sealed class GenerationsController(DrakodaDbContext db, IGenerationQueue 
     {
         var generation = await db.Generations.FindAsync([id], cancellationToken);
         return generation is null ? NotFound() : Ok(generation);
+    }
+
+    [HttpPost("{id:guid}/cancel")]
+    public async Task<IActionResult> Cancel(Guid id, CancellationToken cancellationToken)
+    {
+        var generation = await db.Generations.FindAsync([id], cancellationToken);
+        if (generation is null) return NotFound();
+        if (generation.Status is GenerationStatus.Completed or GenerationStatus.Cancelled or GenerationStatus.ValidationFailed or GenerationStatus.ModerationFailed or GenerationStatus.ProviderFailed)
+            return Conflict(new { error = "GENERATION_NOT_CANCELLABLE", status = generation.Status.ToString() });
+
+        if (generation.Status is GenerationStatus.Submitted or GenerationStatus.Processing)
+            await gateway.CancelAsync(generation, cancellationToken);
+
+        GenerationStateMachine.Transition(generation, GenerationStatus.Cancelled);
+        await db.SaveChangesAsync(cancellationToken);
+        return Ok(new { id = generation.Id, status = generation.Status.ToString() });
     }
 }
 
