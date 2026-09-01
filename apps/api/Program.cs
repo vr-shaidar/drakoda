@@ -16,6 +16,7 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer
 builder.Services.AddSingleton<IAIProviderAdapter, UnconfiguredProviderAdapter>();
 builder.Services.AddSingleton<IProviderRouter, ProviderRouter>();
 builder.Services.AddScoped<AIModelRegistry>();
+builder.Services.AddScoped<IAIGateway, AIGateway>();
 builder.Services.AddSingleton<IGenerationQueue, RedisGenerationQueue>();
 builder.Services.AddHostedService<GenerationWorker>();
 builder.Services.AddProblemDetails();
