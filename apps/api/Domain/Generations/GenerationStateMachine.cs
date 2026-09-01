@@ -1,4 +1,4 @@
-using Drakoda.Api.Domain.AI;
+using Drakoda.AI;
 
 namespace Drakoda.Api.Domain.Generations;
 
@@ -8,7 +8,8 @@ public static class GenerationStateMachine
         new Dictionary<GenerationStatus, GenerationStatus[]>
         {
             [GenerationStatus.Requested] = [GenerationStatus.Validating, GenerationStatus.Cancelled],
-            [GenerationStatus.Validating] = [GenerationStatus.CostEstimated, GenerationStatus.ValidationFailed, GenerationStatus.ModerationFailed],
+            [GenerationStatus.Validating] = [GenerationStatus.Moderation, GenerationStatus.ValidationFailed, GenerationStatus.ModerationFailed],
+            [GenerationStatus.Moderation] = [GenerationStatus.CostEstimated, GenerationStatus.ModerationFailed],
             [GenerationStatus.CostEstimated] = [GenerationStatus.CreditsReserved, GenerationStatus.BillingFailed],
             [GenerationStatus.CreditsReserved] = [GenerationStatus.Queued, GenerationStatus.BillingFailed],
             [GenerationStatus.Queued] = [GenerationStatus.Submitted, GenerationStatus.Cancelled, GenerationStatus.ProviderFailed],
