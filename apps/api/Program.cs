@@ -1,6 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
 using Drakoda.AI;
+using Drakoda.Api.Domain.Generations;
+using Drakoda.Api.Domain.Pricing;
+using Drakoda.Api.Domain.Storage;
 using Drakoda.Api.Infrastructure.Queue;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,7 +21,11 @@ builder.Services.AddSingleton<IProviderRouter, ProviderRouter>();
 builder.Services.AddScoped<AIModelRegistry>();
 builder.Services.AddScoped<IAIGateway, AIGateway>();
 builder.Services.AddSingleton<IGenerationQueue, RedisGenerationQueue>();
+builder.Services.AddScoped<IGenerationJobService, GenerationJobService>();
 builder.Services.AddHostedService<GenerationWorker>();
+builder.Services.AddScoped<IPricingEngine, PricingEngine>();
+builder.Services.AddSingleton<IObjectStorage, LocalObjectStorage>();
+builder.Services.AddScoped<AssetService>();
 builder.Services.AddProblemDetails();
 builder.Services.AddCors(options => options.AddPolicy("web", policy => policy.WithOrigins(builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? ["http://localhost:3000"]).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 
