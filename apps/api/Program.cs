@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
+using Drakoda.AI;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +14,8 @@ builder.Services.AddDbContext<DrakodaDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Postgres")));
 builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
     ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379"));
+builder.Services.AddSingleton<IAIProviderAdapter, UnconfiguredProviderAdapter>();
+builder.Services.AddSingleton<IProviderRouter, ProviderRouter>();
 builder.Services.AddProblemDetails();
 builder.Services.AddCors(options => options.AddPolicy("web", policy =>
     policy.WithOrigins(builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? ["http://localhost:3000"])
